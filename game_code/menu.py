@@ -5,6 +5,8 @@ from loading_image import load_image
 import json
 from inventory import *
 from inventory_objects import *
+from requests import get
+import json
 
 screen = None
 size = w, h, = 720, 480
@@ -46,6 +48,7 @@ class Menu:
         self.settings.mountains_val = data['settings']['mountains']
         self.player = PlayerSettings()
         self.all_sprites= pygame.sprite.Group()
+        self.search = Search()
         settings = load_settings()
         self.inv_data = [[Hand((0, 0), True), Hand((0, 2), False),
                           Hand((0, 2), False),
@@ -117,12 +120,21 @@ class Menu:
                             self.player.show = True
                             self.buttons.show = False
 
-                    if self.player.show:
+                        if self.buttons.settings.rect.colliderect(self.mouse):
+                            self.settings.show = True
+                            self.buttons.show = False
+
+                    elif self.player.show:
                         if self.player.back.rect.colliderect(self.mouse):
                             self.player.show = False
                             self.buttons.show = True
 
                         inv.get_cell(pygame.mouse.get_pos(), screen)
+
+                    elif self.search.show:
+                        if self.search.back.rect.colliderect(self.mouse):
+                            self.search.show = False
+                            self.buttons.show = True
 
                     elif self.buttons.settings.rect.colliderect(self.mouse) and self.settings.show is False and self.levels.show is False and self.player.show is False:
                         self.settings.show = True
@@ -144,6 +156,20 @@ class Menu:
 
                         self.save_settings()
 
+                    elif self.buttons.search.rect.colliderect(self.mouse):
+                        self.buttons.show = False
+                        self.search.show = True
+
+                if e.type == pygame.KEYDOWN:
+                    if e.key == pygame.K_BACKSPACE:
+                        self.search.text = self.search.text[:-1]
+
+                    elif e.key == pygame.K_RETURN:
+                        print(get('http://127.0.0.1:8000/current_lvl='+self.search.text+'/get'))
+
+                    elif self.search.show:
+                        self.search.update(e.unicode)
+
             if self.player.show:
                 for i in range(len(self.inv_data)):
                     for j in range(len(self.inv_data[i])):
@@ -158,6 +184,7 @@ class Menu:
             else:
                 self.all_sprites.empty()
 
+            self.search.draw()
             self.buttons.draw()
             self.levels.draw()
             self.settings.draw()
@@ -183,7 +210,14 @@ class Buttons:
         self.settings.image = pygame.transform.scale(self.settings.image, (64,64))
         self.settings.rect = self.settings.image.get_rect()
         self.settings.left, self.settings.top = 0,0
+
+        self.search = pygame.sprite.Sprite()
+        self.search.image = load_image('search.png')
+        self.search.image = pygame.transform.scale(self.search.image, (64, 64))
+        self.search.rect = pygame.Rect(656,0,64,64)
+
         self.group.add(self.settings)
+        self.group.add(self.search)
 
         self.player_set = pygame.Rect(self.x, self.y+150,self.w,self.h)
 
@@ -217,7 +251,7 @@ class LevelsRender:
         self.back.image = load_image('cancel.jpg')
         self.back.image = pygame.transform.scale(self.back.image, (64,64))
         self.back.rect = self.back.image.get_rect()
-        self.back.rect.left, self.back.rect.top = 0,0
+        self.back.rect.left, self.back.rect.top = 0, 0
         self.group = pygame.sprite.Group()
         self.group.add(self.back)
 
@@ -326,6 +360,42 @@ class PlayerSettings:
         if self.show:
             self.group.draw(screen)
             inv.render(screen)
+
+class Search:
+    def __init__(self):
+        self.show = False
+        self.back = pygame.sprite.Sprite()
+        self.back.image = load_image('cancel.jpg')
+        self.back.image = pygame.transform.scale(self.back.image, (64, 64))
+        self.back.rect = self.back.image.get_rect()
+        self.back.rect.left, self.back.rect.top = 0, 0
+        self.text = ''
+
+        self.group = pygame.sprite.Group()
+        self.group.add(self.back)
+
+        
+
+    def draw(self):
+        if self.show:
+            self.group.draw(screen)
+
+            self.text_draw = font.render(self.text, 1, (255, 255, 255))
+            self.tx = 125
+            self.ty = 78
+            screen.blit(self.text_draw, (self.tx, self.ty))
+
+            pygame.draw.rect(screen, (255, 255, 255),
+                             (120, 80, max(320, self.text_draw.get_width()+10), 65), 2)
+
+
+    def update(self, key):
+        self.text += key
+        print(self.text)
+
+
+
+
 if __name__ == '__main__':
     win = Menu()
     pygame.quit()
