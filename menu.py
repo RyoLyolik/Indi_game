@@ -5,7 +5,7 @@ from loading_image import load_image
 import json
 from inventory import *
 from inventory_objects import *
-from requests import get
+from requests import get, Response
 import json
 
 screen = None
@@ -99,7 +99,7 @@ class Menu:
         while self.event:
             if level is not None:
                 self.event = False
-                run = main_win.Window(level, self.settings.mountains_val)
+                run = main_win.Window(int(level), self.settings.mountains_val)
             screen.fill((0, 0, 0))
             self.mouse = pygame.Rect(*pygame.mouse.get_pos(), 1, 1)
 
@@ -165,12 +165,12 @@ class Menu:
                         self.search.text = self.search.text[:-1]
 
                     elif e.key == pygame.K_RETURN:
-                        level = get('http://127.0.0.1:8000/current_lvl='+self.search.text+'/get').text
-                        file = open('../LEVELS/lvl_'+str(self.search.text)+'.txt', mode='w')
-                        file.write(level)
-                        file.close()
-
-                        main_win.Window(self.search.text, self.settings.mountains_val)
+                        response = get('http://127.0.0.1:8000/current_lvl='+self.search.text+'/get')
+                        if response.ok:
+                            loaded_level = response.text
+                            file = open('../LEVELS/lvl_'+str(self.search.text)+'.txt', mode='w')
+                            file.write(loaded_level)
+                            file.close()
                         
                     elif self.search.show:
                         self.search.update(e.unicode)
@@ -269,6 +269,7 @@ class LevelsRender:
                 self.lvls_grid[lvl // self.max].append(self.lvls[lvl])
         print(self.lvls_grid)
 
+
     def draw(self):
         if self.show == True:
             for i in range(len(self.lvls_grid)):
@@ -280,7 +281,7 @@ class LevelsRender:
                     pygame.draw.rect(screen, (0, 0, 0), (
                         j * (self.size + 10) + 3 + self.left, i * (self.size + 10) + 3 + self.top,
                         self.size - 6, self.size - 6), 0)
-                    level = font.render(str(i * self.max + j + 1), 1, (255, 255, 255))
+                    level = font.render(self.lvls_grid[i][j].split('.')[0].split('_')[-1], 1, (255, 255, 255))
                     level_x = j * (
                             self.size + 10) + self.left + self.size // 2 - level.get_width() // 2
                     level_y = i * (self.size + 10) + self.top
@@ -296,7 +297,7 @@ class LevelsRender:
                             self.size + 10) + self.left + self.size and i * (
                             self.size + 10) + self.top < pos[1] < i * (
                             self.size + 10) + self.top + self.size:
-                        return i * self.max + j
+                        return self.lvls_grid[i][j].split('.')[0].split('_')[-1]
         return None
 
 class Settings:
