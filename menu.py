@@ -5,8 +5,9 @@ from loading_image import load_image
 import json
 from inventory import *
 from inventory_objects import *
-from requests import get, Response
+import requests
 import json
+
 
 screen = None
 size = w, h, = 720, 480
@@ -52,6 +53,7 @@ class Menu:
         self.player = PlayerSettings()
         self.all_sprites = pygame.sprite.Group()
         self.search = Search()
+        self.lbar = Loadbar()
         settings = load_settings()
         self.inv_data = [[Hand((0, 0), True), Hand((0, 2), False),
                           Hand((0, 2), False),
@@ -93,13 +95,16 @@ class Menu:
         self.screen_update()
 
     def screen_update(self):
-        global data
+        global data, update
         self.event = True
         level = None
 
         while self.event:
             if level is not None:
                 self.event = False
+                screen.fill((0,0,0))
+                self.lbar.draw()
+                pygame.display.flip()
                 run = main_win.Window(int(level), self.settings.mountains_val)
             screen.fill((0, 0, 0))
             self.mouse = pygame.Rect(*pygame.mouse.get_pos(), 1, 1)
@@ -114,15 +119,22 @@ class Menu:
                         level = self.levels.get_lvl(pygame.mouse.get_pos())
                     elif self.search.show:
                         get_level = self.search.get_lvl(pygame.mouse.get_pos())
-                        response = get(
-                            'http://127.0.0.1:8000/current_lvl=' + str(get_level) + '/get')
+                        self.lbar.draw()
+                        try:
+                            response = requests.get('http://127.0.0.1:8000/current_lvl=' + str(get_level) + '/get')
 
-                        if response.ok:
-                            loaded_level = response.text
-                            file = open('../LEVELS/lvl_' + str(get_level) + '.txt', mode='w')
-                            file.write(loaded_level)
-                            file.close()
-                            self.levels = LevelsRender()
+                            if response.ok:
+                                loaded_level = response.text
+                                file = open('../LEVELS/lvl_' + str(get_level) + '.txt', mode='w')
+                                file.write(loaded_level)
+                                file.close()
+                                self.levels = LevelsRender()
+                        except ConnectionRefusedError:
+                            pass
+                        except requests.exceptions.ConnectionError:
+                            pass
+                        except requests.packages.urllib3.exceptions.ProtocolError:
+                            pass
 
                     if self.buttons.show:
                         if self.buttons.levels.colliderect(
@@ -181,17 +193,29 @@ class Menu:
                         self.search.text = self.search.text[:-1]
 
                     elif e.key == pygame.K_RETURN:
-                        response = get(
-                            'http://127.0.0.1:8000/current_lvl=' + self.search.text + '/get')
+                        screen.fill((0, 0, 0))
+                        self.lbar.draw()
+                        pygame.display.flip()
+                        response = requests.get('http://127.0.0.1:8000/current_lvl=' + self.search.text + '/get')
                         if response.ok:
                             loaded_level = response.text
                             file = open('../LEVELS/lvl_' + str(self.search.text) + '.txt', mode='w')
                             file.write(loaded_level)
                             file.close()
+                            show = self.levels.show
                             self.levels = LevelsRender()
+                            self.levels.show = show
+                            show = None
 
                     elif self.search.show:
                         self.search.update(e.unicode)
+
+                if e.type == pygame.KEYDOWN and e.key == pygame.K_F5:
+                    print('updated')
+                    show = self.search.show
+                    self.search = Search()
+                    self.search.show = show
+                    show = None
 
             if self.player.show:
                 for i in range(len(self.inv_data)):
@@ -206,7 +230,6 @@ class Menu:
 
             else:
                 self.all_sprites.empty()
-
             self.search.draw()
             self.search.online_levels_draw()
             self.buttons.draw()
@@ -406,10 +429,16 @@ class Search:
 
         self.group = pygame.sprite.Group()
         self.group.add(self.back)
+        try:
+            levels = requests.get('http://127.0.0.1:8000/get_list_of_levels').text
+            levels = levels.split('\n')
+        except ConnectionRefusedError:
+            levels=[]
+        except requests.exceptions.ConnectionError:
+            levels=[]
+        except requests.packages.urllib3.exceptions.ProtocolError:
+            levels=[]
 
-        levels = get('http://127.0.0.1:8000/get_list_of_levels').text
-
-        levels = levels.split('\n')
         self.lvls_grid = []
         for lvl in range(len(levels)):
             if lvl % self.max == 0:
@@ -462,6 +491,20 @@ class Search:
                             self.size + 10) + self.top + self.size:
                         return self.lvls_grid[i][j].split('.')[0].split('_')[-1]
         return None
+
+
+class Loadbar:
+    def __init__(self):
+        self.show = False
+
+    def draw(self):
+        print('loading')
+        l_text = font.render('Loading...', 1,
+                            (255, 255, 255))
+        l_x = 360 - l_text.get_width()//2
+        l_y = 400
+        screen.blit(l_text, (l_x, l_y))
+
 
 
 if __name__ == '__main__':
