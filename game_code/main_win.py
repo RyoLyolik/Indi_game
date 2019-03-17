@@ -11,6 +11,7 @@ import menu
 from upgrade_item import *
 import json
 from background import *
+import requests
 
 def round_to(num, rounded_to=3):
     if int(num) == num:
@@ -137,16 +138,18 @@ class Window:
         if self.show_mountains == 1:
             for i in range(10):
                 self.mountains.append(Mountains(-100+i*1000, screen, '../textures/background/mountains_'+random.choice('123')+'.png'))
-
+        self.data_session = json.loads(open('..\\settings\\last_session.json', mode='r').read())
         self.screen_update()
 
     def screen_update(self):
+        self.save_counter = 0
         self.event = True
         check = pygame.event.Event(2, {'unicode': 'e', 'key': 101, 'mod': 0, 'scancode': 18})
         check_2 = pygame.event.Event(2, {'unicode': '0', 'key': 256, 'mod': 0, 'scancode': 82})
         upgr_menu = pygame.event.Event(2, {'unicode': 'f', 'key': 102, 'mod': 0, 'scancode': 33})
 
         while self.event:
+            self.save_counter += 1
             clock.tick(67)  # 67 is optimal
             if (self.player.pos_y/1000) >= 1:
                 r,g,b = 0,(157/((self.player.pos_y/1000))),(210/((self.player.pos_y/1000)))
@@ -360,7 +363,11 @@ class Window:
             pygame.display.flip()
 
     def save_settings(self):
-        data = load_settings()
+        self.save_counter = 0
+        print('saved')
+        data = {}
+        data['player'] = {}
+        data['inventory'] = {}
         data['player'] = {
             "money": self.player.money,
             "power": self.player.power,
@@ -369,6 +376,7 @@ class Window:
             "level": self.player.level,
             "regen": self.player.regen
         }
+
         for i in range(40):
             y = i // 8
             x = i % 8
@@ -379,10 +387,37 @@ class Window:
                     "power": self.inv_data[x][y].power,
                     "upgrade_cost": self.inv_data[x][y].upgrade_cost
                 }
+            else:
+                data['inventory'][str(i)] = {
+                    "type": "Hand"
+                }
 
-        settings = open('../settings/Player.json', mode='w')
-        json.dump(data, settings)
+        setting = str(data)
+        save = requests.get(
+            'http://127.0.0.1:8000/update_set+id=' + self.data_session[
+                'id'] + '+pass=' + self.data_session[
+                'password'] + '+setting=' + setting)
 
+
+    def load_settings(self):
+        request = 'http://127.0.0.1:8000/load_settings/us=' + str(
+            self.data_session['id']) + '+pass=' + str(self.data_session['password'])
+        auth_response = requests.get(request)
+        if auth_response.text != 'Неверный пароль':
+            settings = auth_response.text.split('|||')[0]
+            settings = ''.join(settings.split('\n'))
+            name = auth_response.text.split('|||')[1]
+            file = open('../settings/Player.json', mode='w')
+            json.dump(json.loads(settings), file)
+            file.close()
+            settings = json.loads(settings)
+            self.player.money = settings['player']['money']
+            self.player.power = settings['player']['power']
+            self.player.upgrade_cost = settings['player']['upgrade_cost']
+            self.player.max_health = settings['player']['max_health']
+            self.player.health = self.player.max_health
+            self.player.level = settings['player']['level']
+            self.player.regen = settings['player']['regen']
 
     def restart(self):
         if self.player.health <= 0:
@@ -539,11 +574,6 @@ class Window:
                 pygame.K_LCTRL] and self.player.block_is_near is False:
                 self.player.speed = -20
 
-            # if self.player.player.left - 100 < 0:
-            #     for entity in self.level_data:
-            #         entity.now_pos[0] -= self.player.speed
-            #     self.player.player.left -= self.player.speed
-
 
         elif pygame.key.get_pressed()[pygame.K_RIGHT] or pygame.key.get_pressed()[pygame.K_d]:
             self.player.speed = 5
@@ -559,31 +589,18 @@ class Window:
                 pygame.K_LCTRL] and self.player.block_is_near is False:
                 self.player.speed = 20
 
-            # if self.player.player.right + 300 > w:
-            #     for entity in self.level_data:
-            #         entity.now_pos[0] -= self.player.speed
-            #     self.player.player.left -= self.player.speed
-
         elif (pygame.key.get_pressed()[pygame.K_SPACE] or pygame.key.get_pressed()[pygame.K_UP] or
               pygame.key.get_pressed()[pygame.K_w]) and self.player.in_air is False:
             self.player.in_air = True
             self.player.stopped = False
             self.player.speed_down = -20
+        elif pygame.key.get_pressed()[pygame.K_F5]:
+            self.load_settings()
+
+        elif pygame.key.get_pressed()[pygame.K_F2]:
+            self.save_settings()
 
         else:
-            # if self.player.player.right + 300 > w:
-            #     for entity in self.level_data:
-            #         entity.now_pos[0] -= self.player.speed
-            #         entity.now_pos[0] -= entity.speed if 'Entity' in entity.get_type() else 0
-            #     self.player.player.left -= self.player.speed
-            # if self.player.player.left - 100 < 0:
-            #     for entity in self.level_data:
-            #         entity.now_pos[0] -= self.player.speed
-            #         entity.now_pos[0] += entity.speed if 'Entity' in entity.get_type() else 0
-            #     self.player.player.left -= self.player.speed
-            # self.player.speed = round(self.player.speed * 0.9, 4)
-            # if abs(self.player.speed) <= 10**-3:
-            #     self.player.speed = 0
             if self.player.in_air:
                 self.player.speed *= 0.9
             else:

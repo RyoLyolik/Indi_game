@@ -68,7 +68,7 @@ class Upgrade:
 
             if self.obj == player:
                 player.max_health = int(round(((player.max_health)*1.04),0))
-                player.regen = round(player.regen * 1.04, 5)
+                player.regen = int(round((player.regen+1) * 1.04, 0))
                 self.obj.power = int(round(((self.obj.power + 1) * 1.03), 0))
                 self.obj.upgrade_cost = int(round(((self.obj.upgrade_cost) * 1.06), 0))
 
