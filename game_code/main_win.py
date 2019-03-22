@@ -176,7 +176,7 @@ class Window:
                 menu.Menu()
             self.restart()
             self.player.regen_cnt += 1
-            if self.player.regen_cnt > 25:
+            if self.player.regen_cnt > 100:
                 if self.player.health < self.player.max_health:
                     self.player.health += self.player.regen
                 else:
@@ -403,7 +403,7 @@ class Window:
         request = 'http://127.0.0.1:8000/load_settings/us=' + str(
             self.data_session['id']) + '+pass=' + str(self.data_session['password'])
         auth_response = requests.get(request)
-        if auth_response.text != 'Неверный пароль':
+        if auth_response.text != 'Error':
             settings = auth_response.text.split('|||')[0]
             settings = ''.join(settings.split('\n'))
             name = auth_response.text.split('|||')[1]

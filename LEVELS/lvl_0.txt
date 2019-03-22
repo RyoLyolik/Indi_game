@@ -13,5 +13,5 @@
 196 -1075 64 _ way:../textures/blocks/grass/grass.png usual
 132 -1275 64 _ way:../textures/blocks/grass/grass.png usual
 196 -1475 64 _ way:../textures/blocks/grass/grass.png usual
-320 196 64 _ bad_entity 1000 140000000000 90000000000
+320 196 64 _ bad_entity 100 1000 500
 0 0 1 1 CoordsBlock usual

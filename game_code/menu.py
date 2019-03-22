@@ -61,10 +61,15 @@ class Menu:
 
         if response.ok:
             loaded_setting = response.text.split('|||')[0]
-            loaded_setting = json.loads(loaded_setting)
-            file = open('../settings/Player.json', mode='w')
-            json.dump(loaded_setting, file)
-            file.close()
+            if response.text != 'Error':
+                loaded_setting = json.loads(loaded_setting)
+                file = open('../settings/Player.json', mode='w')
+                json.dump(loaded_setting, file)
+                file.close()
+            else:
+                self.auth.show = True
+                self.buttons.show = False
+                self.data_session['name'] = 'Please enter'
         settings = load_settings()
         self.inv_data = [[Hand((0, 0), True), Hand((0, 2), False),
                           Hand((0, 2), False),
@@ -130,6 +135,11 @@ class Menu:
                             'http://127.0.0.1:8000/update_set+id=' + self.data_session[
                                 'id'] + '+pass=' + self.data_session[
                                 'password'] + '+setting=' + str(setting))
+
+                        file = open('../settings/last_session.json', mode='w')
+                        json.dump(self.data_session, file)
+                        file.close()
+
                     quit(0)
 
                 if e.type == pygame.MOUSEBUTTONDOWN:
@@ -269,6 +279,7 @@ class Menu:
                                 self.auth.id = self.auth.id[:-1]
 
                         elif e.key == pygame.K_RETURN:
+                            self.load_settings()
                             self.data_session = json.loads(
                                 open('..\\settings\\last_session.json', mode='r').read())
                             self.data_session['name'] = name
@@ -312,7 +323,7 @@ class Menu:
             self.auth.draw()
 
             if self.data_session['id'] != 0:
-                name_draw = font.render(str(name), 1, (255, 255, 255), 5)
+                name_draw = font.render(str(self.data_session['name']), 1, (255, 255, 255), 5)
                 name_x = (w / 2) - name_draw.get_width() // 2
                 name_y = 400
                 screen.blit(name_draw, (name_x, name_y))
@@ -332,16 +343,19 @@ class Menu:
         auth_response = requests.get(request)
         print(auth_response.text)
         print(request)
-        if auth_response.text != 'Неверный пароль':
+        if auth_response.text != 'Error':
             settings = auth_response.text.split('|||')[0]
             settings = ''.join(settings.split('\n'))
             name = auth_response.text.split('|||')[1]
+            self.data_session['name'] = name
             file = open('../settings/last_session.json', mode='w')
             json.dump(self.data_session, file)
             file.close()
             file = open('../settings/Player.json', mode='w')
             json.dump(json.loads(settings), file)
             file.close()
+        else:
+            self.data_session['name'] = 'Wrong password or ID'
 
 class Buttons:
     def __init__(self):
