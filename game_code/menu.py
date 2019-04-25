@@ -55,9 +55,9 @@ class Menu:
         self.lbar = Loadbar()
         self.auth = Auth()
         self.data_session = json.loads(open('..\\settings\\last_session.json', mode='r').read())
-        if self.data_session['id'] != 0:
-            response = requests.get('http://127.0.0.1:8000/load_settings/us=' + str(
-                self.data_session['id']) + '+pass=' + str(self.data_session['password']))
+        if self.data_session['email'] != 0:
+            response = requests.get('http://127.0.0.1:5000/load_settings/us=' + str(
+                self.data_session['email']) + '+pass=' + str(self.data_session['password']))
 
         if response.ok:
             loaded_setting = response.text.split('|||')[0]
@@ -129,11 +129,11 @@ class Menu:
             for e in pygame.event.get():
                 if e.type == pygame.QUIT:
                     self.event = False
-                    if self.data_session['id'] != 0:
+                    if self.data_session['email'] != 0:
                         setting = ''.join(open('../settings/Player.json').read().split(' '))
                         save = requests.get(
-                            'http://127.0.0.1:8000/update_set+id=' + self.data_session[
-                                'id'] + '+pass=' + self.data_session[
+                            'http://127.0.0.1:5000/update_set+email=' + self.data_session[
+                                'email'] + '+pass=' + self.data_session[
                                 'password'] + '+setting=' + str(setting))
 
                         file = open('../settings/last_session.json', mode='w')
@@ -150,7 +150,7 @@ class Menu:
                         self.lbar.draw()
                         try:
                             response = requests.get(
-                                'http://127.0.0.1:8000/current_lvl=' + str(get_level) + '/get')
+                                'http://127.0.0.1:5000/current_lvl=' + str(get_level) + '/get')
 
                             if response.ok:
                                 loaded_level = response.text
@@ -197,13 +197,13 @@ class Menu:
                             self.auth.show = False
                             self.buttons.show = True
 
-                        elif self.auth.id_rect.colliderect(self.mouse):
-                            self.auth.id_active = True
+                        elif self.auth.email_rect.colliderect(self.mouse):
+                            self.auth.email_active = True
                             self.auth.password_active = False
 
                         elif self.auth.password_rect.colliderect(self.mouse):
                             self.auth.password_active = True
-                            self.auth.id_active = False
+                            self.auth.email_active = False
 
                         continue
 
@@ -255,7 +255,7 @@ class Menu:
                             self.lbar.draw()
                             pygame.display.flip()
                             response = requests.get(
-                                'http://127.0.0.1:8000/current_lvl=' + self.search.text + '/get')
+                                'http://127.0.0.1:5000/current_lvl=' + self.search.text + '/get')
                             if response.ok:
                                 loaded_level = response.text
                                 file = open('../LEVELS/lvl_' + str(self.search.text) + '.txt',
@@ -275,8 +275,8 @@ class Menu:
                             if self.auth.password_active:
                                 self.auth.password = self.auth.password[:-1]
 
-                            elif self.auth.id_active:
-                                self.auth.id = self.auth.id[:-1]
+                            elif self.auth.email_active:
+                                self.auth.email = self.auth.email[:-1]
 
                         elif e.key == pygame.K_RETURN:
                             self.load_settings()
@@ -284,15 +284,15 @@ class Menu:
                                 open('..\\settings\\last_session.json', mode='r').read())
                             self.data_session['name'] = name
                             self.data_session['password'] = self.auth.password
-                            self.data_session['id'] = self.auth.id
+                            self.data_session['email'] = self.auth.email
                             self.load_settings()
 
                         elif e.key:
                             if self.auth.password_active:
                                 self.auth.password += e.unicode
 
-                            elif self.auth.id_active:
-                                self.auth.id += e.unicode
+                            elif self.auth.email_active:
+                                self.auth.email += e.unicode
 
                 if e.type == pygame.KEYDOWN and e.key == pygame.K_F5:
                     show = self.search.show
@@ -322,7 +322,7 @@ class Menu:
             self.all_sprites.draw(screen)
             self.auth.draw()
 
-            if self.data_session['id'] != 0:
+            if self.data_session['email'] != 0:
                 name_draw = font.render(str(self.data_session['name']), 1, (255, 255, 255), 5)
                 name_x = (w / 2) - name_draw.get_width() // 2
                 name_y = 400
@@ -333,13 +333,14 @@ class Menu:
     def save_settings(self):
         setting = ''.join(open('../settings/Player.json').read().split(' '))
         save = requests.get(
-            'http://127.0.0.1:8000/update_set+id=' + self.data_session[
-                'id'] + '+pass=' + self.data_session[
+            'http://127.0.0.1:5000/update_set+email=' + self.data_session[
+                'email'] + '+pass=' + self.data_session[
                 'password'] + '+setting=' + str(setting))
+        print(save)
 
     def load_settings(self):
-        request = 'http://127.0.0.1:8000/load_settings/us=' + str(
-            self.data_session['id']) + '+pass=' + str(self.data_session['password'])
+        request = 'http://127.0.0.1:5000/load_settings/us=' + str(
+            self.data_session['email']) + '+pass=' + str(self.data_session['password'])
         auth_response = requests.get(request)
         print(auth_response.text)
         print(request)
@@ -356,6 +357,7 @@ class Menu:
             file.close()
         else:
             self.data_session['name'] = 'Wrong password or ID'
+
 
 class Buttons:
     def __init__(self):
@@ -420,7 +422,7 @@ class Buttons:
             load_y = 354
 
             screen.blit(save_text, (save_x, save_y))
-            screen.blit(load_text, (load_x,load_y))
+            screen.blit(load_text, (load_x, load_y))
 
             self.group.draw(screen)
 
@@ -566,7 +568,7 @@ class Search:
         self.group = pygame.sprite.Group()
         self.group.add(self.back)
         try:
-            levels = requests.get('http://127.0.0.1:8000/get_list_of_levels').text
+            levels = requests.get('http://127.0.0.1:5000/get_list_of_levels').text
             levels = levels.split('\n')
         except ConnectionRefusedError:
             levels = []
@@ -649,10 +651,10 @@ class Auth:
         self.back.rect = self.back.image.get_rect()
         self.back.rect.left, self.back.rect.top = 0, 0
 
-        self.id_active = False
+        self.email_active = False
         self.password_active = False
 
-        self.id = ''
+        self.email = ''
         self.password = ''
 
         self.group = pygame.sprite.Group()
@@ -662,23 +664,23 @@ class Auth:
     def draw(self):
         if self.show:
             self.group.draw(screen)
-            if self.id_active:
-                self.id_draw = self.local_font.render(self.id, 1, (230, 230, 255))
+            if self.email_active:
+                self.email_draw = self.local_font.render(self.email, 1, (230, 230, 255))
             else:
-                self.id_draw = self.local_font.render(self.id, 1, (180, 180, 180))
-            self.idx = 125
-            self.idy = 78
-            screen.blit(self.id_draw, (self.idx, self.idy))
+                self.email_draw = self.local_font.render(self.email, 1, (180, 180, 180))
+            self.emailx = 125
+            self.emaily = 78
+            screen.blit(self.email_draw, (self.emailx, self.emaily))
 
-            if self.id_active:
-                self.id_rect = pygame.draw.rect(screen, (200, 200, 255),
-                                                (120, 80, max(320, self.id_draw.get_width() + 10), 65),
-                                                2)
+            if self.email_active:
+                self.email_rect = pygame.draw.rect(screen, (200, 200, 255),
+                                                   (120, 80, max(320, self.email_draw.get_width() + 10), 65),
+                                                   2)
             else:
-                self.id_rect = pygame.draw.rect(screen, (200, 200, 200),
-                                                (120, 80, max(320, self.id_draw.get_width() + 10),
-                                                 65),
-                                                2)
+                self.email_rect = pygame.draw.rect(screen, (200, 200, 200),
+                                                   (120, 80, max(320, self.email_draw.get_width() + 10),
+                                                    65),
+                                                   2)
 
             if self.password_active:
                 self.password_draw = self.local_font.render(self.password, 1, (230, 230, 255))

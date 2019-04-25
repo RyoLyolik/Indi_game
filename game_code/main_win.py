@@ -278,13 +278,12 @@ class Window:
                                     obj.die = True
                                     obj.paid = True
 
-                # print(e)
-                if e == check or e == check_2:
-                    self.invsee = not self.invsee
-
-                if upgr_menu == e:
-                    self.upg.all_sprites.empty()
-                    self.upg.on_display = not self.upg.on_display
+                if e.type == pygame.KEYDOWN:
+                    if e.unicode == 'e':
+                        self.invsee = not self.invsee
+                    if e.unicode == 'f':
+                        self.upg.all_sprites.empty()
+                        self.upg.on_display = not self.upg.on_display
 
             self.all_sprites.draw(screen)
 
@@ -394,14 +393,14 @@ class Window:
 
         setting = str(data)
         save = requests.get(
-            'http://127.0.0.1:8000/update_set+id=' + self.data_session[
-                'id'] + '+pass=' + self.data_session[
+            'http://127.0.0.1:5000/update_set+email=' + self.data_session[
+                'email'] + '+pass=' + self.data_session[
                 'password'] + '+setting=' + setting)
 
 
     def load_settings(self):
-        request = 'http://127.0.0.1:8000/load_settings/us=' + str(
-            self.data_session['id']) + '+pass=' + str(self.data_session['password'])
+        request = 'http://127.0.0.1:5000/load_settings/us=' + str(
+            self.data_session['email']) + '+pass=' + str(self.data_session['password'])
         auth_response = requests.get(request)
         if auth_response.text != 'Error':
             settings = auth_response.text.split('|||')[0]
